@@ -1,6 +1,6 @@
 $(function(){
 	/*建立socket连接，使用websocket协议，端口号是服务器端监听端口号*/
-	var socket = io('ws://localhost:8081');
+	var socket = io('ws://10.33.134.128:8081');
 	/*定义用户名*/
 	var uname = null;
 

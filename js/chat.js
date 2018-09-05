@@ -82,6 +82,7 @@ $(function(){
 			html='<div class="chat-item item-left clearfix rela"><span class="abs uname">'+data.username+'</span><span class="img fl"></span><span class="fl message">'+data.message+'</span></div>'
 		}
 		$('.chat-con').append(html);
+        $('.chat-wrap')[0].scrollTop=$('.chat-wrap')[0].scrollHeight;
 	}
 
 })

@@ -3,6 +3,7 @@ var io = require('socket.io')(app);
 var PORT = 8081;
 /*定义用户数组*/
 var users = [];
+var usocket = {}; //保存每个用户对应的socket {key:value} key:用户名  value：socket
 
 app.listen(PORT);
 
@@ -26,6 +27,7 @@ io.on('connection', function (socket) {
 	        users.push({
 	          username:data.username
 	        })
+            usocket[username] = socket;
 	        /*登录成功*/
 	        socket.emit('loginSuccess',data);
 	        /*向所有连接的客户端广播add事件*/
@@ -35,6 +37,11 @@ io.on('connection', function (socket) {
 	        socket.emit('loginFail','');
 	    }  
 	})
+
+	//所有在线用户
+	socket.on('users',function () {
+        socket.emit('receive users',users);
+    });
 
 	/*监听发送消息*/
 	socket.on('sendMessage',function(data){
@@ -50,6 +57,15 @@ io.on('connection', function (socket) {
           	users.splice(index,1);
         }
       })
+    })
+
+	//私聊
+
+	socket.on("send private message",function (res) {
+        console.log(res,"----------appjs---------");
+        if(res.recipient in usocket){
+			usocket[res.recipient].each("receive private message",res)
+		}
     })
 })
 

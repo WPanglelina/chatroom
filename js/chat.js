@@ -15,6 +15,11 @@ $(function(){
 		}
 	})
 
+	/*进入私聊*/
+	$('.title').click(function(){
+        window.open(`../privateChat.html?from=${uname}`, "_blank");
+	})
+
 	/*发送消息*/
 	$('.sendBtn').click(function(){
 		sendMessage()

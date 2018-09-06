@@ -27,7 +27,7 @@ io.on('connection', function (socket) {
 	        users.push({
 	          username:data.username
 	        })
-            usocket[username] = socket;
+            usocket[username].s1 = socket;
 	        /*登录成功*/
 	        socket.emit('loginSuccess',data);
 	        /*向所有连接的客户端广播add事件*/
@@ -39,7 +39,8 @@ io.on('connection', function (socket) {
 	})
 
 	//所有在线用户
-	socket.on('users',function () {
+	socket.on('users',function (name) {
+        usocket[username].s2 = socket;
         socket.emit('receive users',users);
     });
 
@@ -64,7 +65,8 @@ io.on('connection', function (socket) {
 	socket.on("send private message",function (res) {
         console.log(res,"----------appjs---------");
         if(res.recipient in usocket){
-			usocket[res.recipient].each("receive private message",res)
+			usocket[res.recipient].s2.emit("receive private message",res)
+			// io.sockets.emit("receive private message",res)
 		}
     })
 })

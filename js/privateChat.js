@@ -1,12 +1,13 @@
 $(function () {
     /*建立socket连接，使用websocket协议，端口号是服务器端监听端口号*/
-    var socket = io('ws://10.33.134.128:8081');
+    var socket = io('ws://192.168.43.97:8081');
+    // var socket = null;
     /*定义用户名*/
     var uname = null;
 
     (function onLoad() {
         uname = getQueryObject().from;
-        socket.emit("users");
+        socket.emit("users",uname);
     })();
 
     socket.on("receive users", function (data) {
@@ -64,10 +65,11 @@ $(function () {
     // 接收私聊信息
     socket.on('receive private message', function (data) {
         console.log(data,"---------");
-        $('#ding')[0].play();
         if(data.addresser == data.recipient) return;
-        var head = '../images/user/user.jpg';
-        $('#'+hex_md5(data.addresser)+' .chat-msg').append('<li><img src="'+head+'"><span class="speak">'+data.body+'</span></li>');
+        if(data.addresser != data.recipient&&uname==data.recipient){
+            var head = '../images/user/user.jpg';
+            $('#'+hex_md5(data.addresser)+' .chat-msg').append('<li><img src="'+head+'"><span class="speak">'+data.body+'</span></li>');
+        }
     });
 
     function sendMessage(head, val){

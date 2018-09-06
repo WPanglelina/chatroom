@@ -39,6 +39,7 @@ io.on('connection', function (socket) {
 	/*监听发送消息*/
 	socket.on('sendMessage',function(data){
         io.sockets.emit('receiveMessage',data);
+        // socket.broadcast.emit('receiveMessage',data);   //给除了自己以外的客户端广播消息
     })
 
 	/*退出登录*/

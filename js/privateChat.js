@@ -1,6 +1,6 @@
 $(function () {
     /*建立socket连接，使用websocket协议，端口号是服务器端监听端口号*/
-    var socket = io('ws://192.168.43.97:8081');
+    var socket = io('ws://10.33.134.128:8081');
     // var socket = null;
     /*定义用户名*/
     var uname = null;
@@ -12,6 +12,7 @@ $(function () {
 
     socket.on("receive users", function (data) {
         console.log(data);
+        $('#session').html("");
         $('#chat').html("");
         if (data.length >= 1) {
             for (var i = 0; i < data.length; i++) {
@@ -47,10 +48,21 @@ $(function () {
 
     //sendMessage
     $(document).on('click','.chat-active .send',function(){
+        toSendMessage()
+    });
+
+    $(document).keydown(function(event){
+        if(event.keyCode == 13){
+            toSendMessage()
+        }
+    })
+
+    //sendMessage
+    function toSendMessage(){
         var recipient = $('.chat-active').attr('data-n');
         var val = $('.chat-active input').val();
         if(val == '') return;
-        sendMessage('src/img/head.jpg',val);
+        sendMessage('../images/user/user.jpg',val);
         //call
         var req = {
             'addresser':uname,
@@ -60,7 +72,7 @@ $(function () {
         }
         socket.emit('send private message', req);
         $('.chat-active input').val('');
-    });
+    }
 
     // 接收私聊信息
     socket.on('receive private message', function (data) {

@@ -31,40 +31,20 @@ io.on('connection', function (socket) {
                 username: data.username
             })
 
-            var s1 = {s1: socket}; //s1 群聊时用户对应的socket
-            usocket[username] = s1;
-            console.log(usocket, "组装usocket");
+            usocket[username] = socket;
             /*登录成功*/
             socket.emit('loginSuccess', data);
             /*向所有连接的客户端广播add事件*/
-            io.sockets.emit('add', data);
+            socket.broadcast.emit('add', data);
 
-            socket.broadcast.emit("receive users", users);  //某一个用户登录进入时，要在其他用户的单聊页面加入该用户
+            socket.emit('users',users); //新登录进入的用户显示当前所有在线的用户
+
         } else {
             /*登录失败*/
             socket.emit('loginFail', '');
         }
     })
 
-    console.log(usocket, "私聊 connection");
-
-    console.log(catchMsgObj, "catch 消息");
-
-    //所有在线用户
-    socket.on('users', function (name) {
-        console.log(usocket, "------一对一聊天-----");
-        console.log(name, " 用户名 ------一对一聊天-----");
-        username2 = name;
-        usocket[name].s2 = socket;  //s2 一对一私聊时用户对应的socket   （存在一个问题，王佩进入单聊，但是董强没有进入单聊时，董强的socket对象中不存在s2，会导致服务器给董强发送消息时报错 ）
-        socket.emit('receive users', users);
-        for (var key in catchMsgObj) {
-            if (key === name) {
-                catchMsgObj[key].forEach(function (res) {
-                    usocket[name].s2.emit("receive private message", res);
-                })
-            }
-        }
-    });
 
     /*监听发送消息*/
     socket.on('sendMessage', function (data) {
@@ -77,30 +57,24 @@ io.on('connection', function (socket) {
         io.sockets.emit('leave', username);
 
         delete usocket[username];  //删除离开的用户的usocket
-        usocket[username2] && usocket[username2].s2 && delete usocket[username2].s2; //关闭某一个用户的单聊页面时，删除该用户的usocket的s2
         catchMsgObj[username2] && delete catchMsgObj[username2];
 
         users.map(function (val, index) {
             if (val.username === username) {
                 users.splice(index, 1);
             }
-
-            socket.broadcast.emit("receive users", users);  //某一个用户离开时要在其他用户的单聊页面删除该用户
         })
     })
 
     //私聊
 
     socket.on("send private message", function (res) {
-        console.log(res, "----------appjs---------");
+        console.log(res);
         if (res.recipient in usocket) {
-            if (usocket[res.recipient].s2) {
-                usocket[res.recipient].s2.emit("receive private message", res)  //（存在一个问题，王佩进入单聊，但是董强没有进入单聊时，董强的socket对象中不存在s2，会导致服务器给董强发送消息时报错 ）
-            } else {
-                catchMessage.push(res);
-                catchMsgObj[res.recipient] = catchMessage;
-            }
-
+            // var data={username:res.recipient,message:res.body};
+            usocket[res.recipient].emit("receive private message", res);
+            // data.username=res.addresser;
+            socket.emit("receive private message", res);
         }
     })
 })

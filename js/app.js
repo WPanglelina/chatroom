@@ -3,9 +3,12 @@ var io = require('socket.io')(app);
 var PORT = 8081;
 /*定义用户数组*/
 var users = [];
+var groups=[];
+var groupsObj={};//群聊对象，{key:value}  key:群聊名 value:(数组) 此群聊中的所有用户名组成的数组
 var usocket = {}; //保存每个用户对应的socket {key:value} key:用户名  value：socket
 var catchMessage = [];  //某一个未打开单聊页面的人的消息
 var catchMsgObj = {};  //所有没有打开单聊页面的人的消息
+var index=1; //群聊名称
 
 app.listen(PORT);
 
@@ -37,7 +40,14 @@ io.on('connection', function (socket) {
             /*向所有连接的客户端广播add事件*/
             socket.broadcast.emit('add', data);
 
-            socket.emit('users',users); //新登录进入的用户显示当前所有在线的用户
+            let myGroup=[];
+            for(var i=0;i<groups.length;i++){
+                if(groups[i].users.indexOf(username)!==-1){
+                    myGroup.push(groups[i]);
+                }
+            }
+
+            socket.emit('users',myGroup.concat(users)); //新登录进入的用户显示当前所有在线的用户，包括自己所在的群
 
         } else {
             /*登录失败*/
@@ -45,11 +55,6 @@ io.on('connection', function (socket) {
         }
     })
 
-
-    /*监听发送消息*/
-    socket.on('sendMessage', function (data) {
-        io.sockets.emit('receiveMessage', data);  //不回存在一对一私聊的socket接收到群聊的消息，因为单聊的socket没有监听这个事件
-    })
 
     /*退出登录*/
     socket.on('disconnect', function () {
@@ -67,7 +72,6 @@ io.on('connection', function (socket) {
     })
 
     //私聊
-
     socket.on("send private message", function (res) {
         console.log(res);
         if (res.recipient in usocket) {
@@ -76,6 +80,34 @@ io.on('connection', function (socket) {
             // data.username=res.addresser;
             socket.emit("receive private message", res);
         }
+    })
+
+    //群聊
+    socket.on("send group message",function (res) {
+        console.log(res,"group message");
+        console.log(groupsObj,"群聊的人");
+        var group_users=groupsObj[res.recipient]; //当前群聊的用户
+        for(var i=0;i<group_users.length;i++){
+            if(group_users[i] in usocket){
+                usocket[group_users[i]].emit("receive group message",res);
+            }
+        }
+    })
+
+    //创建群聊页面显示所有在线用户
+    socket.on("get users",function () {
+        console.log("get users");
+        socket.emit("receive users",users)
+    })
+
+    //添加群
+    socket.on("add group",function (data) {
+        groups.push({username:"群聊"+index,users:data});
+        groupsObj["群聊"+index]=data
+        for(var i=0;i<data.length;i++){
+            usocket[data[i]]&&usocket[data[i]].emit("add",{username:"群聊"+index,userType:"group"});
+        }
+        index++;
     })
 })
 

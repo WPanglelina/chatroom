@@ -15,21 +15,6 @@ $(function(){
 		}
 	})
 
-	/*进入私聊*/
-	$('.title').click(function(){
-        window.open(`../privateChat.html?from=${uname}`, "_blank");
-	})
-
-	/*发送消息*/
-	$('.sendBtn').click(function(){
-		sendMessage()
-	});
-	$(document).keydown(function(event){
-		if(event.keyCode == 13){
-			sendMessage()
-		}
-	})
-
 	/*登录成功*/
 	socket.on('loginSuccess',function(data){
 		if(data.username === uname){
@@ -48,7 +33,7 @@ $(function(){
 	socket.on('add',function(data){
 		/*var html = '<p>系统消息:'+data.username+'已加入群聊</p>';
 		$('.chat-con').append(html);*/
-		let head="../images/user/user.jpg";
+		let head=data.userType==="group"?"../images/user/group.png":"../images/user/user.jpg";
 		showUsers(data.username,head);
 		messageBox(data.username);
 	})
@@ -62,22 +47,14 @@ $(function(){
 		}
 	})
 
-
-
-	/*接收消息*/
-	socket.on('receiveMessage',function(data){
-		showMessage(data)
-	})
-
 	/*退出群聊提示*/
 	socket.on('leave',function(name){
 		if(name != null){
-			/*var html = '<p>'+name+'已退出群聊</p>';
-			$('.chat-con').append(html);*/
 			deleteDom(name);
 		}
 	})
-	
+
+	//某一个用户退出时，在用户列表删除改用户并且删除改用户对应的聊天框
 	function deleteDom(username) {
         $('#session')[0].removeChild($('#li'+hex_md5(username))[0]);
         $('#chat')[0].removeChild($('#'+hex_md5(username))[0]);
@@ -86,34 +63,32 @@ $(function(){
 	/*隐藏登录界面 显示聊天界面*/
 	function checkin(data){
 		$('.login-wrap').hide('slow');
-		// $('.chat-wrap').show('slow');
-		$('#app').show('slow');
-	}
-
-	/*发送消息*/
-	function sendMessage(){
-		var txt = $('#sendtxt').val();
-		$('#sendtxt').val('');
-		if(txt){
-			socket.emit('sendMessage',{username:uname,message:txt});
-		}
+		$('.app').show('slow');
 	}
 
 	/*显示消息*/
-	function showMessage(data){
-		debugger
+	function showMessage(mark,data){
 		var html;
-		if(data.addresser === uname){
-			html = '<div class="chat-item item-right clearfix"><span class="img fr"></span><span class="message fr">'+data.body+'</span></div>'
+		if(mark==="group"){
+            if(data.addresser === uname){
+                html = '<div class="chat-item item-right clearfix"><span class="img fr"></span><span class="message fr">'+data.body+'</span></div>'
+            }
+            else {
+                html='<div class="chat-item item-left clearfix rela"><span class="abs uname">'+data.addresser+'</span><span class="img fl"></span><span class="fl message">'+data.body+'</span></div>'
+            }
             $('#'+hex_md5(data.recipient)+' .chat-msg').append(html);
 		}
-		if(data.recipient === uname){
-			html='<div class="chat-item item-left clearfix rela"><span class="abs uname">'+data.addresser+'</span><span class="img fl"></span><span class="fl message">'+data.body+'</span></div>'
-            $('#'+hex_md5(data.addresser)+' .chat-msg').append(html);
+		else {
+            if(data.addresser === uname){
+                html = '<div class="chat-item item-right clearfix"><span class="img fr"></span><span class="message fr">'+data.body+'</span></div>'
+                $('#'+hex_md5(data.recipient)+' .chat-msg').append(html);
+            }
+            if(data.recipient === uname){
+                html='<div class="chat-item item-left clearfix rela"><span class="abs uname">'+data.addresser+'</span><span class="img fl"></span><span class="fl message">'+data.body+'</span></div>'
+                $('#'+hex_md5(data.addresser)+' .chat-msg').append(html);
+            }
 		}
-		// $('.chat-con').append(html);
-        // $('.chat-wrap')[0].scrollTop=$('.chat-wrap')[0].scrollHeight;
-        // $('#'+hex_md5(data.username)+' .chat-msg').append(html);
+
 	}
 
 	/*显示用户*/
@@ -155,28 +130,83 @@ $(function(){
         }
     })
 
-    //sendMessage
+    //sendMessage  发送消息
     function toSendMessage(){
+    	debugger
         var recipient = $('.chat-active').attr('data-n');
         var val = $('.chat-active input').val();
         if(val == '') return;
-        sendMessage('../images/user/user.jpg',val);
-        //call
+
         var req = {
             'addresser':uname,
             'recipient':recipient,
             'type':'plain',
             'body':val
         }
-        socket.emit('send private message', req);
+        if(recipient.indexOf("群聊")!==-1){
+        	req.messType="group";
+        	socket.emit("send group message",req);
+		}else {
+            socket.emit('send private message', req);
+		}
+
         $('.chat-active input').val('');
     }
 
     // 接收私聊信息
     socket.on('receive private message', function (data) {
         console.log(data);
-		showMessage(data)
+		showMessage("private",data)
 
     });
+
+    //接收群聊消息
+    socket.on("receive group message",function (data) {
+        showMessage("group",data)
+    })
+
+
+    //点击➕号添加群聊
+	$(".add-group").click(function () {
+		$("#user-list").html("");
+		socket.emit("get users");
+        $('.app').hide('slow');
+        $('.user-list-box').show('slow');
+    })
+
+	//创建群聊页面显示所有在线用户不显示自己
+	socket.on("receive users",function (users) {
+		for(var i=0;i<users.length;i++){
+			if(users[i].username!==uname){
+				var touxiang="../images/user/user.jpg";
+				showUserList(users[i].username,touxiang);
+			}
+		}
+    })
+
+	function showUserList(name,head) {
+        $('#user-list').append('<li id="g-' + name + '"><img src="' + head + '"><span class="nick-name">' + name + '</span><input id="'+name+'" type="checkbox"/></li>');
+    }
+
+    $("#cancel-btn").click(function () {
+        $('.app').show('slow');
+        $('.user-list-box').hide('slow');
+    })
+
+	$("#confirm-btn").click(function () {
+		var checkedUsers=[];
+		if($("input:checked").length<2){
+			alert("创建群聊至少选择两个人");
+			return;
+		}
+
+		$("input:checked").each(function () {
+			checkedUsers.push($(this)[0].id);
+        });
+		checkedUsers.push(uname)
+		socket.emit("add group",checkedUsers);
+        $('.app').show('slow');
+        $('.user-list-box').hide('slow');
+    })
 
 })
